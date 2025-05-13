@@ -3,14 +3,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  workflow_call:
-    outputs:
-      new-release-published:
-        description: "Whether or not a new release was published."
-        value: ${{ jobs.build.outputs.new-release-published }}
-      release-version:
-        description: "The version string of the newly published release"
-        value: ${{ jobs.build.outputs.release-version }}
   push:
     branches:
       - [[ repo.github.default_branch ]]
@@ -23,83 +15,64 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      new-release-published: ${{ steps.semantic-release.outputs.new-release-published }}
-      release-version: ${{ steps.semantic-release.outputs.release-version }}
 
     steps:
-    - name: GitHub Environment Variables Action
-      uses: FranzDiebold/github-env-vars-action@v2
-
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-qemu-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - uses: docker/setup-buildx-action@v3
       with:
         # moby/buildkit v0.11.0 causes untagged images to appear in github
         # packages and the workaround does not seem to have any effect
         # (set provenance=false in docker/build-push-action@v4)
         driver-opts: network=host,image=moby/buildkit:v0.10.5
 
-    - name: Create release
+    - name: Semantic release
       id: semantic-release
-      uses: codfish/semantic-release-action@v3
-      with:
-        # support releasing the "main" branch
-        # whilst preserving the action defaults
-        branches: |
-          [
-            '+([0-9])?(.{+([0-9]),x}).x',
-            '[[ repo.github.default_branch ]]',
-            'next',
-            'next-major',
-            {
-              name: 'beta',
-              prerelease: true
-            },
-            {
-              name: 'alpha',
-              prerelease: true
-            }
-          ]
-        additional-packages: |
-          ['@semantic-release/changelog', '@semantic-release/git', '@semantic-release/exec']
-        repository-url: 'https://github.com/${{ github.repository_owner }}/${{ env.CI_REPOSITORY_NAME }}.git'
-        tag-format: 'v${version}'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        npm install --no-save semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/exec conventional-changelog @semantic-release/release-notes-generator
+        npx semantic-release --repository-url ${{ github.server_url }}/${{ github.repository }}
+        echo "release-version=$(cat .gitrelease)" >> "$GITHUB_OUTPUT"
 
-    - name: Docker meta
-      id: meta
+    - id: meta
       uses: docker/metadata-action@v5
       with:
         images: |
-          ghcr.io/${{ github.repository_owner }}/${{ env.CI_REPOSITORY_NAME }}
+          ghcr.io/${{ github.repository }}
         tags: |
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
           type=raw,value=${{ steps.semantic-release.outputs.release-version }}
 
-    - name: Login to Container Registry ghcr.io
-      uses: docker/login-action@v3
+    - uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push
-      uses: docker/build-push-action@v6
+    - uses: docker/build-push-action@v6
       with:
         context: .
         provenance: false
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        # For additional docker build args set github_workflows.build.extra_docker_build_args in the repo.yaml file
         build-args: |
-          PACKAGIST_USER=token
-          PACKAGIST_TOKEN=${{ secrets.PACKAGIST_TOKEN }}
+{% for key, value in docker_build_args.items() %}
+          [[key]]=[[value]]
+{% endfor %}
+{% if workflow_group in followup_workflows %}
+{% for followup_workflow in followup_workflows[workflow_group] %}
+
+  [[ followup_workflow.name ]]-followup:
+    needs: build
+    secrets: inherit
+    uses: ./[[ followup_workflow.path_from_root ]]
+{% endfor %}
+{% endif %}

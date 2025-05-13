@@ -4,15 +4,11 @@
     repo_path: "{{ lookup('env', 'PWD') }}"
   tasks:
 
+    - import_tasks: tasks/version-migrations.yaml
     - import_tasks: tasks/retrieve-validate-repo-data.yaml
+
     - import_tasks: tasks/retrieve-docs-data.yaml
     - import_tasks: tasks/generate-files.yaml
-
-    - import_tasks: tasks/husky.yaml
-      when: repo.type != 'other'
-
-    - import_tasks: tasks/helm.yaml
-      when: repo.helm_charts
 
     - name: Execute tasks for applications, libraries, and symfony-bundles
       block:

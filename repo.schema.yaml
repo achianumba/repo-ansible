@@ -5,7 +5,11 @@ additionalProperties: false
 properties:
   $meta:
     type: object
-    description: Repo-specific metadata
+    description: repo-ansible specific metadata
+
+  version:
+    type: string
+    description: Version of compatible repo-ansible release. Automatically updated during repo-ansible runs.
 
   name:
     type: string
@@ -20,7 +24,7 @@ properties:
       Repository description that shows up in the sidebar on GitHub, and as the first line of the README after the
       repository name.
     minLength: 1
-    maxLength: 100
+    maxLength: 350
 
   type:
     type: string
@@ -190,6 +194,59 @@ properties:
             type: boolean
             default: false
 
+  github_workflows:
+    type: object
+    additionalProperties: false
+    description: EXPERIMENTAL configuration options for the optionally generated GitHub workflows (sdlc_workflows)
+    properties:
+      build:
+        type: object
+        additionalProperties: false
+        properties:
+          extra_docker_build_args:
+            type: object
+            additionalProperties: true
+            default: {}
+            description: >
+              Key-value pairs to use as build args during the docker build step of build and release workflow
+      release:
+        type: object
+        additionalProperties: false
+        description: Configuration options for release process
+        properties:
+          commit_changed_files:
+            type: array
+            default: [ ]
+            items:
+              type: string
+            description: >
+              A list of files in addition to CHANGELOG.md and package.json (for repo.type starting with `nodejs-`) to
+              include in the commit with changes.
+          issue_url_format:
+            type: string
+            default: ""
+            description: >
+              Override the base URL for the issues mentioned with conventional-commits.
+              Use {{id}} for the issue ID, as well other placeholders mentioned in
+              https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md#substitutions
+
+  reviewdog:
+    type: object
+    description: Reviewdog configuration. Used during repo-ansible/reviewdog container execution
+    additionalProperties: false
+    properties:
+      platforms:
+        description: >
+          A broad way to categorize programming languages, libraries, and frameworks, and for which we have an external
+          tool we can use to assure code quality during review.
+        type: array
+        default: []
+        items:
+          type: string
+          enum:
+            - php
+            - twig
+
   php:
     type: object
     description: PHP specific values
@@ -206,8 +263,8 @@ properties:
         type: boolean
         default: false
         description: >
-          When enabled no pre-defined .devcontainer/docker-compose.yaml file will be generated, and instead the
-          devcontainer will attempt to use a docker-compose.yaml file located in the root of the repository.
+          When enabled the compose file located at .devcontainer/docker-compose.yaml will no longer get automatically
+          updated. Allowing users to customize their docker-compose setup.
       postCreateCommand:
         description: >
           Additional (shell) commands to run when the containers is created. For a typical project you would specify
@@ -256,11 +313,6 @@ properties:
         description: Image tag
         type: string
         default: php8-review
-
-  helm_charts:
-    type: boolean
-    default: false
-    description: Enable generation of Helm charts.
 
   phpqa:
     type: object
@@ -346,6 +398,14 @@ properties:
       enabled:
         type: boolean
         default: true
+
+  omit_files:
+    type: array
+    default: []
+    description: "**EXPERIMENTAL** A list of files to skip during file generation."
+    items:
+      type: string
+
 definitions:
   section:
     type: object

@@ -22,6 +22,13 @@ Reads from and writes to the repo.
 Set the step's `env.GITHUB_TOKEN` to `secrets.GITHUB_TOKEN` as in the
 [action's doc][semantic-release-action-doc]
 
+### PR Labeler
+
+Inspects the commits in a pull-request, and applies a series of labels based on conventional-commits nouns.
+
+The tokens are defined in the `.github/settings.yml` file, with the repo-ansible
+template located at `templates/.github/settings.yml.j2`.
+
 ### Login to Container Registry ghcr.io (docker/login-action)
 
 Logs in to ghcr, ready for subsequent actions to push and pull container
@@ -73,24 +80,6 @@ and give it one of the Roles:
       is to give the repo the Admin role over its own package and Read over
 other packages it uses (e.g. php-docker-base).
 
-### `secrets.CHARTMUSEUMPASS`
-
-This is a secret made available to the repo as an Organisation-level secret.
-See if the repo has access to it at the repo Settings > Secrets & Variables >
-Actions > Secrets (tab) > Organization secrets section.
-
-The secret is intended to be used with the username "github" to login to
-LinkORB's [Helm Chart Museum][helm-chart-museum] with Basic Auth.  Something
-like this:
-
-```console
-curl --silent --fail --show-error \
-    -u "github:${{ secrets.CHARTMUSEUMPASS }}" \
-    --data-binary "@`ls -1 *.tgz | head -n1`" \
-    https://charts.linkorb.com/api/charts
-```
-
-
 
 ## Tips
 
@@ -116,4 +105,3 @@ and give it the Read role.
 [php-docker-base-pkg-settings]: <https://github.com/orgs/linkorb/packages/container/php-docker-base/settings>
 [semantic-release-action-doc]: <https://github.com/codfish/semantic-release-action/tree/main#basic-usage>
 [checkout-action-doc]: <https://github.com/docker/login-action#github-container-registry>
-[helm-chart-museum]: <https://charts.linkorb.com/api/charts>

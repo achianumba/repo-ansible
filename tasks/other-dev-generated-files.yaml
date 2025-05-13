@@ -1,23 +1,42 @@
 - when: repo.github.features.sdlc_workflows
   block:
-  - name: copy semantic-release .releaserc file
-    ansible.builtin.copy:
-      src: ./templates/.releaserc
-      dest: "{{ repo_path }}/.releaserc"
+  - name: generate semantic-release config file
+    ansible.builtin.template:
+      src: ./templates/.releaserc.cjs.j2
+      dest: "{{ repo_path }}/.releaserc.cjs"
+    vars:
+      package_json_version_bump: "{{ repo.type.startswith('nodejs-') or 'package.json' in repo.github_workflows.release.commit_changed_files }}"
+
+  - name: find workflow extensions
+    ansible.builtin.command: "./library/list_extension_workflows.py '{{ repo_path }}'"
+    register: extension_workflows
+    changed_when: false
+
+  - name: define followup_workflows
+    set_fact:
+      followup_workflows: "{{ extension_workflows.stdout | from_json }}"
+
+  - name: define docker build args
+    set_fact:
+      docker_build_args: "{{ default_docker_build_args | combine(repo.github_workflows.build.extra_docker_build_args) }}"
 
   - name: copy github actions workflow files
     ansible.builtin.template:
-      src: "./templates/.github/workflows/{{ item }}.j2"
-      dest: "{{ repo_path + '/.github/workflows/' + item }}"
+      src: "./templates/.github/workflows/{{ item.target }}.j2"
+      dest: "{{ repo_path + '/.github/workflows/' + item.target }}"
       variable_start_string: '[['
       variable_end_string: ']]'
+    vars:
+      workflow_group: "{{ item.workflow_group }}"
     loop:
-      - 00-start.yaml
-      - 10-review.yaml
-      - 30-release-and-build.yaml
-      - 40-helm.yaml
-      - 50-security.yaml
-      - 90-cleanup.yaml
+      - target: 10-review.yaml
+        workflow_group: "10"
+      - target: 30-release-and-build.yaml
+        workflow_group: "30"
+      - target: 50-security.yaml
+        workflow_group: "50"
+      - target: 90-cleanup.yaml
+        workflow_group: "90"
 
 - name: generate .dockerignore
   ansible.builtin.template:
