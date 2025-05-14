@@ -1,24 +1,24 @@
 - hosts: localhost
   connection: local
-  vars:
-    repo_path: "{{ lookup('env', 'PWD') }}"
-  tasks:
-
-    - import_tasks: tasks/version-migrations.yaml
-    - import_tasks: tasks/retrieve-validate-repo-data.yaml
-
-    - import_tasks: tasks/retrieve-docs-data.yaml
-    - import_tasks: tasks/generate-files.yaml
-
-    - name: Execute tasks for applications, libraries, and symfony-bundles
-      block:
-      - import_tasks: tasks/devcontainer.yaml
-      - import_tasks: tasks/other-dev-generated-files.yaml
-      when: >
-        repo.type in ['application', 'library', 'symfony-bundle']
-        or repo.type.startswith('php-') or repo.type.startswith('nodejs-')
-
-    - import_tasks: tasks/php-qa.yaml
-      when: >
-        repo.type in ['application', 'library', 'symfony-bundle']
-        or repo.type.startswith('php-')
+  gather_facts: true
+  pre_tasks:
+    - name: Load repository data
+      load_repo:
+        path: "{{ lookup('env', 'PWD') }}"
+  roles:
+    - role: migrations
+      tags: [migrations]
+    - role: github
+      tags: [github]
+    - role: docs
+      tags: [docs]
+    - role: php
+      tags: php
+    - role: docker
+      tags: docker
+    # - name: Execute tasks for applications, libraries, and symfony-bundles
+    #   block:
+    #   - import_tasks: tasks/other-dev-generated-files.yaml
+    #   when: >
+    #     repo.type in ['application', 'library', 'symfony-bundle']
+    #     or repo.type.startswith('php-') or repo.type.startswith('nodejs-')

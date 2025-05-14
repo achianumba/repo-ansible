@@ -1,7 +1,24 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
+from ansible.module_utils.basic import AnsibleModule
+from pathlib import Path
 import yaml
-import sys
+
+DOCUMENTATION = r'''
+module: yaml_format
+
+short_description: Formats a YAML file
+
+options:
+  path:
+    description: Absolute path to the yaml file to be formatted
+    type: str
+    required: true
+
+author:
+  - Marius Ghita (@mhitza)
+  - Arinze Chianumba (@achianumba)
+'''
 
 # https://stackoverflow.com/questions/45004464/yaml-dump-adding-unwanted-newlines-in-multiline-strings
 yaml.SafeDumper.org_represent_str = yaml.SafeDumper.represent_str
@@ -15,11 +32,32 @@ def repr_str(dumper, data):
 
 yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
+def main():
+    argument_spec = {
+        'path': {
+            'type': str,
+            'required': True
+        }
+    }
 
-file_path = sys.argv[1]
-with open(file_path, 'r') as file:
-    document = file.read()
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True
+    )
 
-structure = yaml.safe_load(document)
-with open(file_path, 'w') as file:
-  yaml.safe_dump(structure, file)
+    file_path = Path(module.params['path'])
+
+    with open(file_path, 'r') as file:
+        document = file.read()
+
+    structure = yaml.safe_load(document)
+    
+    with open(file_path, 'w') as file:
+        yaml.safe_dump(structure, file)
+    
+    module.exit_json(
+        changed=True
+    )
+
+if __name__ == '__main__':
+    main()

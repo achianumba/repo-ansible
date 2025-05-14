@@ -1,0 +1,31 @@
+# [[ repo_extras.notice ]]
+name: Scheduled Cleanup
+
+on:
+  schedule:
+  - cron: 0 13 * * 2
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+    - name: Keep last 5 published container images
+      uses: actions/delete-package-versions@v5
+      with:
+        package-name: ${{ github.event.repository.name }}
+        package-type: container
+        min-versions-to-keep: 5
+{% if workflow_group in followup_workflows %}
+{% for followup_workflow in followup_workflows[workflow_group] %}
+
+  [[ followup_workflow.name ]]-followup:
+    needs: cleanup
+    secrets: inherit
+    uses: ./[[ followup_workflow.path_from_root ]]
+{% endfor %}
+{% endif %}

@@ -1,0 +1,20 @@
+- name: Load docs
+  load_docs:
+    path: "{{ repo_extras.docs_dir }}"
+
+- name: Copy LICENSE file
+  ansible.builtin.copy:
+    src: licenses/{{ repo.license }}.md
+    dest: "{{ repo_extras.path }}/LICENSE"
+
+- name: Generate CONTRIBUTING file
+  template:
+    src: CONTRIBUTING.md.j2
+    dest: "{{ repo_extras.path }}/CONTRIBUTING.md"
+  when: "'CONTRIBUTING.md' not in repo.omit_files"
+
+- name: generate README.md file
+  ansible.builtin.template:
+    src: README.md.j2
+    dest: "{{ repo_extras.path }}/README.md"
+  when: repo.readme.enable_generation

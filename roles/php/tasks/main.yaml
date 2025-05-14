@@ -1,0 +1,51 @@
+- when: >
+        repo.type in ['application', 'library', 'symfony-bundle']
+        or repo.type.startswith('php-')
+  block:
+  - name: Ensure composer-unused.php is absent
+    ansible.builtin.file:
+      path: "{{ repo_extras.path }}/composer-unused.php"
+      state: absent
+
+  # XXX: composer-unused as part of Card (epic) 8980
+  #- name: Generate composer-unused.php file
+  #  ansible.builtin.template:
+  #    src: "{{ './templates/php-qa/composer-unused.php.j2' }}"
+  #    dest: "{{ repo_extras.path + '/composer-unused.php' }}"
+  - when: repo_extras.enable_reviewdog
+    block:
+    - name: Generate .reviewdog.yaml
+      ansible.builtin.template:
+        src: php-qa/reviewdog.yaml.j2
+        dest: "{{ repo_extras.path }}/.reviewdog.yaml"
+
+    - when: "'php' in repo.reviewdog.platforms"
+      block:
+      - name: Generate .php-cs-fixer.dist.php
+        ansible.builtin.template:
+          src: php-qa/php-cs-fixer.dist.php.j2
+          dest: "{{ repo_extras.path }}/.php-cs-fixer.dist.php"
+
+      - name: gitignore .php-cs-fixer.cache
+        ansible.builtin.blockinfile:
+          path: "{{ repo_extras.path }}/.gitignore"
+          create: yes # file if missing
+          state: present
+          marker: "# {mark} repo-ansible reviewdog php"
+          block: |
+            .php-cs-fixer.cache
+
+      - name: Generate phpstan.neon
+        ansible.builtin.template:
+          src: php-qa/phpstan.neon.j2
+          dest: "{{ repo_extras.path }}/phpstan.neon"
+
+    - when: "'twig' in repo.reviewdog.platforms"
+      name: gitignore .twig-cs-fixer.cache
+      ansible.builtin.blockinfile:
+        path: "{{ repo_extras.path }}/.gitignore"
+        create: yes # file if missing
+        state: present
+        marker: "# {mark} repo-ansible reviewdog twig"
+        block: |
+          .twig-cs-fixer.cache

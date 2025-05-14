@@ -1,8 +1,0 @@
-# {{ repo_managed }}
-
-parameters:
-  level: {{ repo.phpqa.phpstan.level }}
-  paths:
-  {% for path in repo.phpqa.phpstan.path -%}
-    - {{ path }}
-  {%- endfor %}

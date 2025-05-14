@@ -1,0 +1,40 @@
+- name: stat repo-ansible .gitrelease file
+  ansible.builtin.stat:
+    path: .gitrelease
+  register: gitrelease_file_path
+
+- when: gitrelease_file_path.stat.exists
+  block:
+    - name: read .gitrelease file
+      ansible.builtin.slurp:
+        src: .gitrelease
+      register: gitrelease
+
+    - name: parse .gitrelease string
+      set_fact:
+        target_repo_ansible_version: "{{ gitrelease.content | b64decode | trim }}"
+
+    - name: Settings facts for required migrations
+      list_migrations:
+        version: "{{ repo_extras.version }}"
+      changed_when: true
+
+    - when: "{{ repo_ansible_migrations | length > 0 }}"
+      block:
+        - name: Running migration
+          ansible.builtin.include_tasks: "{{ migration }}"
+          loop: "{{ repo_ansible_migrations }}"
+          loop_control:
+            # XXX renamed to avoid warnings if included tasks include loops of their own
+            loop_var: migration
+    
+    - when: target_repo_ansible_version != repo_extras.version
+      block:
+        - name: "updating version in repo.yaml"
+          copy:
+            dest: "{{ repo_extras.path }}/repo.yaml"
+            content: "{{ original_repo_data | combine({'version': target_repo_ansible_version }) | to_nice_yaml }}"
+
+        - name: reformat repo.yaml file
+          yaml_format:
+            path: "{{ repo_extras.path }}/repo.yaml"

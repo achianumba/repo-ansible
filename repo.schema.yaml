@@ -10,6 +10,7 @@ properties:
   version:
     type: string
     description: Version of compatible repo-ansible release. Automatically updated during repo-ansible runs.
+    default: v0.0.0
 
   name:
     type: string
@@ -38,11 +39,17 @@ properties:
       - nodejs-web
       - nodejs-library
       - nodejs-cli
+      - python
       - other
       # DEPRECATED enums
       - application
       - library
       - symfony-bundle
+
+  owner:
+    type: string
+    description: The repository's owner
+    default: linkorb
 
   codeowners:
     type: array
@@ -375,6 +382,7 @@ properties:
   website:
     type: string
     description: URL with more information about of this repository
+    # remove default and replace with github.com/{{repo_data.owner}}/{{repo.name}}
     default: https://engineering.linkorb.com
 
   readme:
@@ -410,10 +418,17 @@ definitions:
   section:
     type: object
     properties:
-      title:
-        type: string
-      content:
-        type: string
+      # Let's deprecate this pattern in favour of
+      # one where a before or after implies a given
+      # partial E.g. installation.before.md and/or 
+      # installation.after.md optionally implies installation.md. Only the README template
+      # Let's make it more human friendly by ditching the
+      # title/content pattern.
+      # requires it anyway.
+      # title:
+      #   type: string
+      # content:
+      #   type: string
       after:
         type: string
       before:

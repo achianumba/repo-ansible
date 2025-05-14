@@ -1,0 +1,21 @@
+# {{ repo_extras.notice }}
+runner:
+{% if 'php' in repo.reviewdog.platforms %}
+  phpstan:
+    name: phpstan
+    cmd: phpstan analyze --configuration=phpstan.neon --error-format=checkstyle --memory-limit=-1
+    format: checkstyle
+    level: error
+
+  php-cs-fixer:
+    name: php-cs-fixer
+    cmd: php-cs-fixer fix --dry-run --diff .php-cs-fixer.dist.php --ansi --format checkstyle
+    format: checkstyle
+    level: error
+{% endif %}
+{% if 'twig' in repo.reviewdog.platforms %}
+  twig-cs-fixer:
+    cmd: "twig-cs-fixer --report=checkstyle"
+    format: checkstyle
+    level: error
+{% endif %}

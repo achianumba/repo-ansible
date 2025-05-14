@@ -1,0 +1,8 @@
+- name: "updating version in repo.yaml"
+  copy:
+    dest: "{{ repo_extras.path }}/repo.yaml"
+    content: "{{ original_repo_data | combine({'version': to_version}) | to_nice_yaml }}"
+
+- name: reformat repo.yaml file
+  yaml_format:
+    path: "{{ repo_extras.path }}/repo.yaml"
